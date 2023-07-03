@@ -1,52 +1,105 @@
 const express = require('express')
 const mongoose = require('mongoose')
+const bcrypt = require('bcrypt');
+const User = require('../Models/User.jsx')
+const jwt = require('jsonwebtoken')
 
 
-const register = (req,res,next)=>{
+const register =(req,res,next)=>{
 
-    if (!email || !password || !name) {
+    const {name,email,password} = req.body;
+    console.log(req.body)
 
-        return res.send({ error: "please add all the fields" })
+    if(!name || !email || !password){
+
+        return res.status(400).json({msg:"Please enter all fields"})
     }
+    if(password.length < 6){
 
-    if (password < 8) {
-
-        return res.send({ error: "password should be atleast 8 characters long" })
+        return res.status(400).json({msg:"Password must be at least 6 characters"})
     }
+    if (!email.includes("@")){
 
-    if (!email.includes("@")) {
-
-        return res.send({ error: "please enter a valid email" })
+        return res.status(400).json({msg:"Please enter a valid email"})
     }
+    let hashPassword=bcrypt.hashSync(password,10);
 
-    userCollection.findOne({ email: email }).then((userFound) => {
+    User.findOne({email:email}).then(userFound=>{
 
-        if (userFound != null) {
+        if(userFound){
 
-            return res.send("user already exists")
+            return res.status(400).json({msg:"User already exists"})
         }
-        bcrypt.hash(password, 12).then((hashPassword) => {
-            const UserSignup = new userCollection({
-                name: name,
-                email: email,
-                password: hashPassword
-            })
+        // let otp= 1000000 + parseInt(Math.random()*9000000);
+        // sendMail(otp);
+       
+            const register = User.create({
+                name,
+                email,
+                password:hashPassword,
+                // phone
+            }).then(userCreated=>{
+                
+                res.status(201).json({msg:"User created successfully"})
+            }).catch(err=>{
+                res.status(500).json({msg:err})
+            }
+            )
+           
+        
 
-            UserSignup.save().then(() => {
-                // through gmail verification
-                res.send("user saved successfully")
-            })
-        })
-            .catch((err) => {
+      
 
-                res.send({ error: "error occured while saving user" })
-            })
-    }).catch((err) => {
-
-        res.send({ error: "error occured while finding user" })
     })
 
+    
+}
+
+const login =(req,res,next)=>{
+
+
+    const {email,password} = req.body;
+    console.log("email",email,password)
+
+    if(!email ){
+
+        return res.status(400).json({msg:"Please enter email"})
+    }
+    if(!password){
+
+        return res.status(400).json({msg:"Please enter passwords"})
+    }
+    if (!email.includes("@")){
+        return res.status(400).json({msg:"Please enter a valid email"})
+    }
+    User.findOne({email:email}).then(userFound=>{
+        if(!userFound){
+                
+                return res.status(400).json({msg:"User not found"})
+            }
+            // compare password
+            let comparePassword= bcrypt.compareSync(password,userFound.password);
+            if(!comparePassword){
+                return res.status(400).json({msg:"Invalid password"})
+            }
+            // create token 
+            jwt.sign(
+                {email:userFound.email,
+                id:userFound._id},'sdadadadasd',{},(err,token)=>{
+                if(err){
+                    return res.status(500).json({msg:"Server error"})
+                }
+                
+                 res.cookie("token",token).json(userFound)
+         
+            })
+            
+    }).catch(err=>{
+        res.status(500).json({msg:"Server error"})
+    }
+    )
 
 }
 
-module.exports= {register}
+
+module.exports= {register,login}

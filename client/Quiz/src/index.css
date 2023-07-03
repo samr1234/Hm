@@ -8,5 +8,5 @@
 
 input[type="text"],input[type="email"],input[type="password"],textarea{
 
-    @apply Laptop:w-[25rem] py-3 mb-5 rounded-xl px-2 border;
+    @apply Laptop:w-[25rem] py-3 mb-5 rounded-xl px-2 border  focus:outline-none focus:border-green-500 focus:border-2 focus:shadow-lg;
 }
